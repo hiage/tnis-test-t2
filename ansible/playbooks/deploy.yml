@@ -1,0 +1,94 @@
+---
+- name: Deploy OpenSearch, Nginx, and Web Application
+  hosts: test-t2
+  become: yes
+  gather_facts: yes
+  
+  pre_tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+      
+    - name: Create project directory
+      file:
+        path: "/opt/logging-system"
+        state: directory
+        mode: '0755'
+
+  roles:
+    - role: common
+      tags: [common]
+    - role: docker
+      tags: [docker]
+    - role: nginx
+      tags: [nginx]
+    - role: opensearch
+      tags: [opensearch]
+
+  post_tasks:
+    - name: Check if containers are running
+      shell: docker ps
+      register: docker_ps_result
+      changed_when: false
+
+    - name: Display container status
+      debug:
+        var: docker_ps_result.stdout_lines
+ 
+    - name: Wait for OpenSearch Node 1 to be available
+      uri:
+        url: "https://{{ opensearch_host }}:{{ opensearch_port }}"
+        method: GET
+        status_code: 200
+        user: "{{ opensearch_username }}"
+        password: "{{ opensearch_initial_admin_password }}"
+        force_basic_auth: yes
+        validate_certs: no
+      register: result
+      until: result.status == 200
+      retries: 60
+      delay: 10
+      ignore_errors: yes
+
+    - name: Wait for OpenSearch cluster health
+      uri:
+        url: "https://{{ opensearch_host }}:{{ opensearch_port }}/_cluster/health"
+        method: GET
+        status_code: 200
+        user: "{{ opensearch_username }}"
+        password: "{{ opensearch_initial_admin_password }}"
+        force_basic_auth: yes
+        validate_certs: no
+      register: cluster_health
+      until: cluster_health.status == 200 and (cluster_health.json.status == "green" or cluster_health.json.status == "yellow")
+      retries: 30
+      delay: 10
+      ignore_errors: yes
+
+    - name: Wait for OpenSearch Dashboard to be available
+      uri:
+        url: "http://{{ opensearch_host }}:{{ opensearch_dashboard_port }}"
+        method: GET
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 60
+      delay: 5
+      ignore_errors: yes
+
+    - name: Show access information
+      debug:
+        msg: |
+          System has been deployed successfully!
+          
+          Access URLs:
+          - OpenSearch: https://{{ opensearch_host }}:{{ opensearch_port }}
+          - OpenSearch Dashboard: http://{{ opensearch_host }}:{{ opensearch_dashboard_port }}
+          - Frontend Application: http://{{ nginx_host }}:80
+          
+          OpenSearch Cluster Info:
+          - Username: {{ opensearch_username }}
+          - Password: {{ opensearch_initial_admin_password }}
+          - Cluster: {{ opensearch_cluster_name }}

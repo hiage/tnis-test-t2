@@ -1,0 +1,48 @@
+---
+# Handlers for OpenSearch role
+
+- name: restart docker compose stack
+  community.docker.docker_compose_v2:
+    project_src: /opt/logging-system
+    files:
+      - docker-compose.yml
+    state: present
+    recreate: always
+  environment:
+    PYTHONPATH: /opt/ansible_venv/lib/python3.*/site-packages
+
+- name: restart fluentbit container
+  community.docker.docker_compose_v2:
+    project_src: /opt/logging-system
+    files:
+      - docker-compose.yml
+    services:
+      - fluentbit
+    state: present
+    recreate: always
+  environment:
+    PYTHONPATH: /opt/ansible_venv/lib/python3.*/site-packages
+
+- name: restart opensearch container
+  community.docker.docker_compose_v2:
+    project_src: /opt/logging-system
+    files:
+      - docker-compose.yml
+    services:
+      - opensearch
+    state: present
+    recreate: always
+  environment:
+    PYTHONPATH: /opt/ansible_venv/lib/python3.*/site-packages
+
+- name: restart opensearch-dashboards container
+  community.docker.docker_compose_v2:
+    project_src: /opt/logging-system
+    files:
+      - docker-compose.yml
+    services:
+      - opensearch-dashboards
+    state: present
+    recreate: always
+  environment:
+    PYTHONPATH: /opt/ansible_venv/lib/python3.*/site-packages

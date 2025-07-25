@@ -1,0 +1,24 @@
+---
+# Handlers for Nginx role
+
+- name: restart docker compose stack
+  community.docker.docker_compose_v2:
+    project_src: /opt/logging-system
+    files:
+      - docker-compose.yml
+    state: present
+    recreate: always
+  environment:
+    PYTHONPATH: /opt/ansible_venv/lib/python3.*/site-packages
+
+- name: restart nginx container
+  community.docker.docker_compose_v2:
+    project_src: /opt/logging-system
+    files:
+      - docker-compose.yml
+    services:
+      - nginx
+    state: present
+    recreate: always
+  environment:
+    PYTHONPATH: /opt/ansible_venv/lib/python3.*/site-packages

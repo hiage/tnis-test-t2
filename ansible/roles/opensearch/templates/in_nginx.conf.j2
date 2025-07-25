@@ -1,0 +1,29 @@
+[INPUT]
+    Name                        tail
+    Path                        /var/log/nginx/access-*log*
+    Tag                         nginx.access
+    Parser                      nginx_access
+    Read_from_head              false
+    Mem_Buf_Limit               10MB
+    Refresh_Interval            10
+    Buffer_Chunk_Size           1024KB
+    Buffer_Max_Size             2M
+    Rotate_Wait                 30
+    Storage.type                filesystem
+    Key                         message
+    Skip_Empty_Lines            On
+
+[INPUT]
+    Name                        tail
+    Path                        /var/log/nginx/error-*
+    Tag                         nginx.error
+    Parser                      nginx_error
+    Read_from_head              true
+    Mem_Buf_Limit               10MB
+    Refresh_Interval            10
+    Buffer_Chunk_Size           1024KB
+    Buffer_Max_Size             2M
+    Rotate_Wait                 30
+    Storage.type                filesystem
+    Key                         message
+    Skip_Empty_Lines            On

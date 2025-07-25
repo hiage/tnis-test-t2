@@ -1,0 +1,33 @@
+[OUTPUT]
+    Name                      opensearch
+    Match                     nginx.access
+    Host                      ${OS_OUTPUT_HOST}
+    Port                      ${OS_OUTPUT_PORT}
+    HTTP_User                 ${OS_HTTP_USER}
+    HTTP_Passwd               ${OS_HTTP_PASSWORD}
+    tls                       On
+    tls.verify                Off
+    Retry_Limit               5
+    Replace_Dots              On
+    Suppress_Type_Name        On
+    Logstash_Format           On
+    Logstash_Prefix           frontend
+    Logstash_DateFormat       %Y.%m.%d
+    Type                      _doc
+
+[OUTPUT]
+    Name                      opensearch
+    Match                     nginx.error
+    Host                      ${OS_OUTPUT_HOST}
+    Port                      ${OS_OUTPUT_PORT}
+    HTTP_User                 ${OS_HTTP_USER}
+    HTTP_Passwd               ${OS_HTTP_PASSWORD}
+    tls                       On
+    tls.verify                Off
+    Retry_Limit               5
+    Replace_Dots              On
+    Suppress_Type_Name        On
+    Logstash_Format           On
+    Logstash_Prefix           error-frontend
+    Logstash_DateFormat       %Y.%m.%d
+    Type                      _doc

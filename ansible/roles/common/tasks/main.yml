@@ -1,0 +1,43 @@
+---
+# Common tasks for all servers
+
+- name: Install required packages
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+      - python3-pip
+      - python3-setuptools
+      - git
+      - vim
+      - htop
+      - net-tools
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+# Python packages for Docker are now installed in a virtual environment by the docker role
+# See ansible/roles/docker/tasks/install_docker_python.yml
+
+- name: Create project directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  with_items:
+    - /opt/logging-system
+    - /opt/logging-system/configs
+    - /opt/logging-system/configs/nginx
+    - /opt/logging-system/configs/fluentbit
+    - /opt/logging-system/configs/opensearch
+    - /opt/logging-system/data
+    - /opt/logging-system/data/opensearch
+    - /var/log/nginx
+    - /var/log/fluent-bit
+
+- name: Set timezone to UTC
+  timezone:
+    name: UTC

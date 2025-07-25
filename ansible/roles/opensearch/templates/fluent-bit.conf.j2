@@ -1,0 +1,36 @@
+@SET STORAGE_PATH={{ fluentbit_storage_path }}
+
+#OpenSearch Configuration
+@SET OS_OUTPUT_HOST={{ ip_opensearch_node1 }}
+@SET OS_OUTPUT_PORT=9200
+@SET OS_HTTP_USER={{ opensearch_username }}
+@SET OS_HTTP_PASSWORD={{ opensearch_password }}
+
+[SERVICE]
+    http_server                 On
+    http_listen                 0.0.0.0
+    http_port                   2020
+    flush                       1
+    daemon                      Off
+    log_level                   info
+    dns.resolver                legacy
+    parsers_file                conf/parsers.conf
+    storage.path                ${STORAGE_PATH}
+    storage.sync                normal
+    storage.checksum            off
+    storage.max_file_size       1M
+    storage.max_chunks_up       128
+    storage.backlog.mem_limit   50M
+    scheduler.base              3
+    scheduler.cap               30
+
+# [FILTER]
+#     Name                        modify
+#     Match                       *
+#     Add hostname                ${HOSTNAME}
+
+# INPUT
+@INCLUDE conf/in_nginx.conf
+
+# OUTPUT
+@INCLUDE conf/out_nginx.conf

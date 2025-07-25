@@ -1,0 +1,41 @@
+---
+# Tasks for Nginx configuration
+
+- name: Create Nginx configuration directory
+  file:
+    path: /opt/logging-system/configs/nginx
+    state: directory
+    mode: '0755'
+
+- name: Create Nginx SSL directory
+  file:
+    path: /opt/logging-system/configs/nginx/ssl
+    state: directory
+    mode: '0755'
+
+- name: Generate Nginx configuration
+  template:
+    src: nginx.conf.j2
+    dest: /opt/logging-system/configs/nginx/nginx.conf
+    mode: '0644'
+  notify: restart nginx container
+
+- name: Deploy SSL certificate
+  template:
+    src: server.pem.j2
+    dest: /opt/logging-system/configs/nginx/ssl/server.pem
+    mode: '0644'
+  notify: restart nginx container
+
+- name: Deploy SSL private key
+  template:
+    src: server.key.j2
+    dest: /opt/logging-system/configs/nginx/ssl/server.key
+    mode: '0600'
+  notify: restart nginx container
+
+- name: Ensure Nginx log directory exists
+  file:
+    path: /var/log/nginx
+    state: directory
+    mode: '0755'

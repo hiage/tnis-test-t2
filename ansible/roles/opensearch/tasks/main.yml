@@ -1,0 +1,78 @@
+---
+# Tasks for OpenSearch and OpenSearch Dashboard deployment
+
+- name: Create OpenSearch configuration directory
+  file:
+    path: /opt/logging-system/configs/opensearch
+    state: directory
+    mode: '0755'
+
+- name: Create FluentBit configuration directory
+  file:
+    path: /opt/logging-system/configs/fluentbit
+    state: directory
+    mode: '0755'
+
+- name: Create OpenSearch data directory
+  file:
+    path: /opt/logging-system/data/opensearch
+    state: directory
+    mode: '0755'
+    owner: 1000
+    group: 1000
+
+- name: Generate docker-compose.yml for OpenSearch
+  template:
+    src: docker-compose.yml.j2
+    dest: /opt/logging-system/docker-compose.yml
+    mode: '0644'
+  notify: restart docker compose stack
+
+- name: Generate .env file for OpenSearch
+  template:
+    src: env.j2
+    dest: /opt/logging-system/.env
+    mode: '0644'
+  notify: restart docker compose stack
+
+- name: Generate FluentBit configuration
+  template:
+    src: fluent-bit.conf.j2
+    dest: /opt/logging-system/configs/fluentbit/fluent-bit.conf
+    mode: '0644'
+  notify: restart fluentbit container
+
+- name: Generate FluentBit input configuration
+  template:
+    src: in_nginx.conf.j2
+    dest: /opt/logging-system/configs/fluentbit/in_nginx.conf
+    mode: '0644'
+  notify: restart fluentbit container
+
+- name: Generate FluentBit output configuration
+  template:
+    src: out_nginx.conf.j2
+    dest: /opt/logging-system/configs/fluentbit/out_nginx.conf
+    mode: '0644'
+  notify: restart fluentbit container
+
+- name: Generate FluentBit parser configuration
+  template:
+    src: parsers.conf.j2
+    dest: /opt/logging-system/configs/fluentbit/parsers.conf
+    mode: '0644'
+  notify: restart fluentbit container
+
+- name: Deploy Docker Compose stack
+  community.docker.docker_compose_v2:
+    project_src: /opt/logging-system
+    files:
+      - docker-compose.yml
+    state: present
+  register: output
+  environment:
+    PYTHONPATH: /opt/ansible_venv/lib/python3.*/site-packages
+
+- name: Show Docker Compose output
+  debug:
+    var: output

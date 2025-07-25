@@ -1,0 +1,84 @@
+user  nginx nginx;
+worker_processes auto;
+worker_rlimit_nofile 1024;
+events  {
+        use epoll;
+        worker_connections 8192;
+        epoll_events 512;
+        multi_accept on;
+        accept_mutex_delay 10ms;
+}
+
+http {
+        server_tokens off;
+        include /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+
+        log_format main_json escape=json '{"time":"$time_iso8601","remote_addr":"$remote_addr","request_uri":"$request_uri","http_status":"$status","body_bytes_sent":"$body_bytes_sent","http_referer":"$http_referer","http_user_agent":"$http_user_agent","http_x_forwarded_for":"$http_x_forwarded_for","domain":"$host","request_time":"$request_time","upstream":"$upstream_addr","upstream_status":"$upstream_status","upstream_response_time":"$upstream_response_time","cache":"$upstream_cache_status","scheme":"$scheme","request_method":"$request_method","server_addr":"$server_addr","server_port":"$server_port","protocol":"$server_protocol","content_type":"$content_type","bytes_received":"$request_length","bytes_sent":"$bytes_sent","connection":"$connection","connection_requests":"$connection_requests","request_body":"$request_body","hostname":"$hostname"}';
+
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        gzip on;
+        gzip_comp_level 3;
+        gzip_proxied any;
+        gzip_types text/plain text/css text/js application/x-javascript application/javascript text/xml application/xml application/xml+rss text/javascript;
+        server_names_hash_bucket_size 128;
+        server_names_hash_max_size 512;
+        fastcgi_ignore_client_abort  on;
+        fastcgi_buffer_size 128k;
+        fastcgi_buffers 4 256k;
+        fastcgi_busy_buffers_size 256k;
+        large_client_header_buffers 4 16k;
+        fastcgi_read_timeout 300;
+        fastcgi_send_timeout 300;
+        uwsgi_read_timeout 120s;
+        uwsgi_send_timeout 120s;
+        proxy_connect_timeout 300;
+        proxy_send_timeout 300;
+        proxy_read_timeout 300;
+
+server {
+        listen *:80;
+        server_name frontend.abdurrahmanalghifari.my.id;
+        return 301 https://frontend.abdurrahmanalghifari.my.id;
+       }
+
+server {
+    	listen 443 ssl;
+
+    	ssl_certificate /etc/nginx/ssl/server.pem;
+    	ssl_certificate_key /etc/nginx/ssl/server.key;
+        ssl_verify_depth 3;
+        ssl_protocols TLSv1.2 TLSv1.1 TLSv1;
+        ssl_session_cache    shared:SSL:10m;
+        ssl_session_timeout  10m;
+        ssl_prefer_server_ciphers on;
+        ssl_ciphers "EDH+AESGCM:EDH+AES256:EDH+AES128:ECDH+AESGCM:ECDH+AES256:ECDH+AES128:DH+3DES:!ADH:!AECDH:!MD5:!SHA1:!SHA256:!SHA384:!RC4";
+
+    	server_name frontend.abdurrahmanalghifari.my.id;
+    	client_max_body_size 10M;
+
+    	access_log /var/log/nginx/access-fe-json.log main_json;
+    	error_log /var/log/nginx/error-fe.log;
+
+        location / {
+                proxy_redirect off;
+                proxy_pass_header Server;
+                proxy_set_header X-Forwarded-For   $remote_addr;
+                proxy_set_header X-Real-IP         $remote_addr;
+                proxy_set_header Host              $http_host;
+                proxy_set_header X-Real-Host       $host;
+                proxy_set_header X-Forwarded-Proto $host;
+                proxy_pass http://frontend:{{ port_frontend }};
+
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+}
+
+}
