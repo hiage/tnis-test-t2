@@ -1,0 +1,180 @@
+services:
+  backend:
+    image: ${BACKEND_IMAGE}:${BACKEND_VERSION}
+    # pull_policy: always
+    hostname: backend-${SERVICES_VERSION}
+    container_name: backend-${SERVICES_VERSION}
+    networks:
+      netstack:
+        ipv4_address: ${IP_BACKEND}
+    ports:
+      - "${PORT_BACKEND}:${PORT_BACKEND}"
+    healthcheck:
+      test: ["CMD", "curl", "-XGET", "http://${IP_BACKEND}:${PORT_BACKEND}"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+
+  frontend:
+    image: ${FRONTEND_IMAGE}:${FRONTEND_VERSION}
+    # pull_policy: always
+    hostname: frontend-${SERVICES_VERSION}
+    container_name: frontend-${SERVICES_VERSION}
+    networks:
+      netstack:
+        ipv4_address: ${IP_FRONTEND}
+    extra_hosts:
+      - "frontend:${IP_FRONTEND}"
+    environment:
+      BACKEND_API: ${IP_BACKEND}:${PORT_BACKEND}
+    ports:
+      - "${PORT_FRONTEND}:${PORT_FRONTEND}"
+    healthcheck:
+      test: ["CMD", "curl", "-XGET", "http://${IP_FRONTEND}:${PORT_FRONTEND}"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
+  nginx:
+    image: ${NGINX_IMAGE}:${NGINX_VERSION}
+    container_name: nginx-${SERVICES_VERSION}
+    hostname: nginx-${SERVICES_VERSION}
+    networks:
+      netstack:
+        ipv4_address: ${IP_NGINX}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./configs/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./configs/nginx/ssl:/etc/nginx/ssl:ro
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      - frontend
+      - backend
+    command: ["nginx", "-c", "/etc/nginx/nginx.conf", "-g", "daemon off;"]
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl --max-time 2 --silent --head http://localhost || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  fluentbit:
+    image: ${FLUENTBIT_IMAGE}:${FLUENTBIT_VERSION}
+    # pull_policy: always
+    container_name: fluentbit-${SERVICES_VERSION}
+    hostname: fluentbit-${SERVICES_VERSION}
+    networks:
+      netstack:
+        ipv4_address: ${IP_FLUENTBIT}
+    volumes:
+      - ./configs/fluentbit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./configs/fluentbit/parsers.conf:/fluent-bit/etc/conf/parsers.conf:ro
+      - ./configs/fluentbit/in_nginx.conf:/fluent-bit/etc/conf/in_nginx.conf:ro
+      - ./configs/fluentbit/out_nginx.conf:/fluent-bit/etc/conf/out_nginx.conf:ro
+      - nginx-logs:/var/log/nginx:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:2020/api/v1/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - nginx
+      - opensearch-node1
+
+  opensearch-node1:
+    container_name: opensearch-node1
+    hostname: opensearch-node1
+    image: ${OPENSEARCH_IMAGE}:${OPENSEARCH_VERSION}
+    networks:
+      netstack:
+        ipv4_address: ${IP_OPENSEARCH_NODE1}
+    environment:
+      - cluster.name=${OPENSEARCH_CLUSTER_NAME}
+      - node.name=opensearch-node1
+      - discovery.seed_hosts=opensearch-node1,opensearch-node2
+      - cluster.initial_cluster_manager_nodes=opensearch-node1,opensearch-node2
+      - bootstrap.memory_lock=false
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    privileged: true
+    volumes:
+      - opensearch-data1:/usr/share/opensearch/data
+    ports:
+      - "${OPENSEARCH_PORT}:9200"
+      - "9600:9600"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl --max-time 2 --silent --head https://localhost:9200 -k || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  opensearch-node2:
+    container_name: opensearch-node2
+    hostname: opensearch-node2
+    image: ${OPENSEARCH_IMAGE}:${OPENSEARCH_VERSION}
+    networks:
+      netstack:
+        ipv4_address: ${IP_OPENSEARCH_NODE2}
+    environment:
+      - cluster.name=${OPENSEARCH_CLUSTER_NAME}
+      - node.name=opensearch-node2
+      - discovery.seed_hosts=opensearch-node1,opensearch-node2
+      - cluster.initial_cluster_manager_nodes=opensearch-node1,opensearch-node2
+      - bootstrap.memory_lock=false
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    privileged: true
+    volumes:
+      - opensearch-data2:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl --max-time 2 --silent --head https://localhost:9200 -k || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  opensearch-dashboard:
+    container_name: opensearch-dashboard
+    hostname: opensearch-dashboard
+    image: ${OPENSEARCH_DASHBOARD_IMAGE}:${OPENSEARCH_DASHBOARD_VERSION}
+    networks:
+      netstack:
+        ipv4_address: ${IP_OPENSEARCH_DASHBOARD}
+    ports:
+      - "${OPENSEARCH_DASHBOARD_PORT}:5601"
+    environment:
+      - OPENSEARCH_HOSTS=["https://opensearch-node1:9200","https://opensearch-node2:9200"]
+    depends_on:
+      - opensearch-node1
+      - opensearch-node2
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl --max-time 2 --silent --head http://localhost:5601 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  opensearch-data1:
+  opensearch-data2:
+  nginx-logs:
+
+networks:
+  netstack:
+    ipam:
+      config:
+        - subnet: ${IP_SUBNET}
