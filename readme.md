@@ -17,8 +17,12 @@ Proyek ini merupakan implementasi **Logging dan Observability Sistem dengan Open
 - Playbook deployment otomatis (`ansible/playbooks/deploy.yml`)
 - Role-based configuration:
   - `common`: Base system setup
+  - `docker` : docker base setup
   - `nginx`: Web server dan SSL configuration
-  - `opensearch`: Search engine dan log processing setup
+  - `frontend` : frontend base setup
+  - `backend` : backend base setup
+  - `fluentbit` : fluent-bit base setup
+  - `opensearch`: log storage dan dashboard
 - Inventory management dengan variabel terpusat
 - Template-based configuration management
 

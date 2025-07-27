@@ -5,7 +5,7 @@ Berikut merupakan gambaran arsitektur dan integrasi antar sistem.
 
 ## Component Architecture
 
-### 1. Infrastructure
+### Infrastructure
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Host Server                              │
@@ -49,7 +49,8 @@ Berikut merupakan gambaran arsitektur dan integrasi antar sistem.
   - Error: `/var/log/nginx/error-fe.log`
 
 ### Application Layer
-
+pada application layer ini saya menggunakan 2 service, yaitu frontend dan backend yg merupakan project lama saya.
+https://github.com/hiage/webapps
 #### Frontend Service
 - **Image**: `docker.io/hiage/frontend:development`
 - **Port**: 3000
@@ -57,7 +58,7 @@ Berikut merupakan gambaran arsitektur dan integrasi antar sistem.
 - **Function**: User interface aplikasi web
 - **Dependencies**: Backend API
 - **Environment**: 
-  - `BACKEND_API`: 172.99.0.4:8080
+- `BACKEND_API`: 172.99.0.4:8080
 
 #### Backend Service
 - **Image**: `docker.io/hiage/backend:development`
@@ -112,19 +113,30 @@ Berikut merupakan gambaran arsitektur dan integrasi antar sistem.
 ### User to Ansible to System Deployment
 
 ```
-┌───────────────────┐    SSH/22        ┌─────────────┐    Docker API    ┌─────────────┐
-│    User           │ ───────────────► │   Ansible   │ ───────────────► │   Docker    │
-│ (System Engineer) │                  │ Controller  │                  │   Engine    │
-└───────────────────┘                  └─────────────┘                  └─────────────┘
-                                              │                                 │
-                                              │ Playbook Execution              │ Container
-                                              │                                 │ 
-                                              ▼                                 ▼
-                                       ┌─────────────┐                   ┌─────────────┐
-                                       │   Target    │                   │ Application │
-                                       │   Server    │                   │  Services   │
-                                       │10.212.13.50 │                   │   Stack     │
-                                       └─────────────┘                   └─────────────┘
+┌────────────────────┐                                     
+│     User           │                                     
+│ (System Engineer)  │                                     
+└─────────┬──────────┘                                     
+          │  Run Playbook (ansible-playbook ...)           
+          ▼                                                
+┌─────────────────────┐         SSH/22         ┌────────────────────┐
+│  Ansible Controller │ ─────────────────────► │   Target Server    │
+│ (Localhost / CI/CD) │                        │    10.212.13.50    │
+└─────────┬───────────┘                        │                    │
+          │                                    │   ┌────────────┐   │
+          │ Docker Compose & Templates         │   │   Docker   │   │
+          └──────────────────────────────────► │   │   Engine   │   │
+                                               │   └────┬───────┘   │
+                                               │        │ Docker API│
+                                               │        ▼           │
+                                               │  ┌───────────────┐ │
+                                               │  │  Containers   │ │
+                                               │  │  (Nginx,      │ │
+                                               │  │  Frontend,    │ │
+                                               │  │  Backend,     │ │
+                                               │  │  OpenSearch)  │ │
+                                               │  └───────────────┘ │
+                                               └────────────────────┘
 ```
 
 ### Ansible Deployment Workflow
